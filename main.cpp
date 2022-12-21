@@ -1,7 +1,8 @@
-﻿#include <SDL.h>
+#include <SDL.h>
 #include <random>
 #include <deque>
 #include <windows.h>
+#include <cmath>
 
 /*
 * written by chapel1337
@@ -12,14 +13,18 @@
 * i'll probably make a christmas tree decorator after this because christmas is in 5 days
 * we haven't been hit with a snow storm yet unfortunately
 * will add snow piling feature tomorrow
+* 
+* 12/21/2022 - adding snow piling feature, took awhile to make
 */
 
 #ifdef DEBUG
-	#include <iostream>
-	using std::cout;
+#include <iostream>
+using std::cout;
 #endif
 
-using std::deque;
+using std::deque, std::fabs;
+
+int main(int argc, char* args[]);
 
 SDL_Window* window{ SDL_CreateWindow("snow", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 500, 500, SDL_WINDOW_SHOWN) }; // && SDL_WINDOW_FULLSCREEN) };
 SDL_Surface* surface{ SDL_GetWindowSurface(window) };
@@ -28,14 +33,14 @@ SDL_Renderer* renderer{ SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC
 // SDL_Surface* kot{ SDL_LoadBMP("dog.bmp") };
 // SDL_Rect mouseCollision{ 0, 0, 25, 25 };
 
-// SDL_Rect snowPile{ 250, 250, 10, 20 };
+SDL_FRect snowPile{ 0, 500, 500, -15 };
 
 SDL_Event event{};
 
 int speed{ 1 };
 
 bool random{};
-bool pileSnow{ true };
+bool pileSnow{};
 
 deque<deque<SDL_Rect>> snowFlakes
 {
@@ -75,8 +80,6 @@ void fall()
 		// SDL_GetMouseState(&mouseCollision.x, &mouseCollision.y);
 		SDL_PollEvent(&event);
 
-		// cout << mouseX << ", " << mouseY << '\n';
-
 		if (event.type == SDL_QUIT)
 		{
 			SDL_DestroyWindow(window);
@@ -109,7 +112,6 @@ void fall()
 				cout << speed << '\n';
 			#endif
 		}
-		/*
 		else if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_s)
 		{
 			if (pileSnow)
@@ -120,7 +122,7 @@ void fall()
 			{
 				pileSnow = true;
 			}
-		*/
+		}
 		/*
 		else if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_LEFT)
 		{
@@ -148,7 +150,7 @@ void fall()
 		}
 		else if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_h)
 		{
-			MessageBoxA(NULL, "\n to increase or decrease the speed of the the snow, use the scrollwheel\n if a mouse is not present, use the up and down arrows instead \n to toggle random colors, press r \n to exit, press esc \n to open the help menu, press h \n\n written by chapel1337 \n started on 12/19/2022, finished on 12/20/2022", "help", MB_ICONQUESTION);
+			MessageBoxA(NULL, "\n to increase or decrease the speed of the the snow, use the scrollwheel\n if a mouse is not present, use the up and down arrows instead \n to toggle random colors, press r \n to toggle snow piling, press s \n to exit, press esc \n to open the help menu, press h \n\n written by chapel1337 \n started on 12/19/2022, finished on 12/20/2022", "help", MB_ICONQUESTION);
 		}
 		else if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_r)
 		{
@@ -162,6 +164,18 @@ void fall()
 			}
 		}
 
+		if (pileSnow && snowPile.h <= -500)
+		{
+			snowPile.h = -15;
+
+			for (int i{}; i < snowFlakes.size(); ++i)
+			{
+				snowFlakes[i].clear();
+			}
+
+			main(0, 0);
+		}
+
 		if (!random)
 		{
 			SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
@@ -171,14 +185,36 @@ void fall()
 		{
 			for (int o{}; o < snowFlakes[i].size(); ++o)
 			{
-				if (snowFlakes[i][o].y >= 500 || snowFlakes[i][o].x >= 500)
-				{
-					// snowPile.h += 5;
-					snowFlakes[i][o].y = getRandom(1, 15);
+				if (pileSnow)
+				{		
+					// this took an abnormally long time to fix
+					if (snowFlakes[i][o].y > snowPile.y - std::fabs(snowPile.h))
+					{
+						// cout << snowFlakes[i][o].y << " | " << snowPile.y - std::fabs(snowPile.h) << '\n';
+
+						snowPile.h -= 0.05;
+						snowFlakes[i][o].y = getRandom(1, 5);
+					}
 				}
-				else if (snowFlakes[i][o].y <= 0 || snowFlakes[i][o].x <= 0)
+				else
 				{
-					snowFlakes[i][o].y = 480;
+					if (snowFlakes[i][o].y > 500)
+					{
+						snowFlakes[i][o].y = getRandom(1, 5);
+					}
+				}
+				if (snowFlakes[i][o].y < 0)
+				{
+					snowFlakes[i][o].y = getRandom(1, 5);
+				}
+
+				if (snowFlakes[i][o].x > 500)
+				{
+					snowFlakes[i][o].x = getRandom(1, 5);
+				}
+				if (snowFlakes[i][o].x < 0)
+				{
+					snowFlakes[i][o].x = getRandom(499, 494);
 				}
 
 				/*
@@ -194,18 +230,6 @@ void fall()
 					}
 				}
 
-				for (int p{ mouseX }; p >= mouseX - 10; --p)
-				{
-					if (snowFlakes[i][o].x == p)
-					{
-						/// cout << i << '-' << o << " | " << snowFlakes[i][o].y << " | mouse -x : " << p << '\n';
-
-						snowFlakes[i][o].x -= 1;
-
-						break;
-					}
-				}
-
 				for (int p{ mouseY }; p <= mouseY + 10; ++p)
 				{
 					if (snowFlakes[i][o].y == p)
@@ -216,19 +240,8 @@ void fall()
 					}
 				}
 
-				for (int p{ mouseY }; p <= mouseY - 10; ++p)
-				{
-					if (snowFlakes[i][o].y == p)
-					{
-						snowFlakes[i][o].y -= 1;
-
-						break;
-					}
-				}
-				*/
-
 				/*
-				
+
 				for (int p{ mouseCollision.y }; p <= mouseCollision.h; ++p)
 				{
 					for (int a{ mouseCollision.x }; a <= mouseCollision.w; ++a)
@@ -263,12 +276,10 @@ void fall()
 					SDL_SetRenderDrawColor(renderer, getRandom(1, 255), getRandom(1, 255), getRandom(1, 255), 255);
 				}
 
-				/*
 				if (pileSnow)
 				{
-					SDL_RenderFillRect(renderer, &snowPile);
+					SDL_RenderFillRectF(renderer, &snowPile);
 				}
-				*/
 
 				SDL_RenderFillRect(renderer, &snowFlakes[i][o]);
 			}
@@ -281,7 +292,7 @@ void fall()
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 		SDL_RenderClear(renderer);
 
-		SDL_Delay(10);
+		SDL_Delay(1);
 	}
 }
 
